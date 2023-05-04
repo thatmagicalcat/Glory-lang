@@ -15,16 +15,19 @@ pub enum Token {
     #[token("/")]
     Divide = 4,
 
-    #[regex(r"-?[0-9]+", |lex| lex.slice().parse().ok())]
+    #[regex("-?[0-9]+", |lex| lex.slice().parse().ok())]
     Number(i64),
 
     #[token("dup")]
     Clone,
 
-    #[token(".")]
+    #[regex("dup_[1-9]+[0-9]*", |lex| lex.slice().replace("dup_", "").parse().ok())]
+    Clones(u32),
+
+    #[token("print")]
     Print,
 
-    #[token("..")]
+    #[token("println")]
     Println,
 
     #[token("if")]
