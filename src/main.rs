@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::io::Write;
 
 use logos::Logos;
 use rorth::Stack;
@@ -23,10 +24,6 @@ fn main() {
             .collect::<Vec<_>>();
 
         let cref = cross_reference(&tokens);
-        if !cref.is_empty() {
-            println!("{cref:#?}\n----");
-        }
-
         let mut stack = Stack::new();
         let mut idx = 0;
 
@@ -76,7 +73,7 @@ fn main() {
                     let v1 = pop_back!(stack);
                     let v2 = pop_back!(stack);
 
-                    stack.push_back((v1 > v2) as _);
+                    stack.push_back((v2 > v1) as _);
                 }
 
                 Eq => {
@@ -123,7 +120,10 @@ fn main() {
 
                 ELSE => idx = cref[&idx].1 - 1, // -1 because it will get incremented at the end of the loop
                 Clone => stack.push_back(stack.peek_back().expect("Unexpected token")),
-                Print => print!("{}", pop_back!(stack)),
+                Print => {
+                    print!("{}", pop_back!(stack));
+                    std::io::stdout().flush().expect("Failed to flush stdout");
+                }
                 Println => println!("{}", pop_back!(stack)),
                 Clones(n) => {
                     if stack.len() < n as usize {
@@ -131,11 +131,16 @@ fn main() {
                         std::process::exit(1);
                     }
 
-                    let slice = &stack.get_raw_stack().iter().copied().rev().collect::<Vec<_>>()[0..n as _];
+                    let slice = &stack
+                        .get_raw_stack()
+                        .iter()
+                        .copied()
+                        .rev()
+                        .collect::<Vec<_>>()[0..n as _];
                     slice.iter().rev().for_each(|i| stack.push_back(*i));
                 }
 
-                _ => {  }
+                _ => {}
             }
 
             idx += 1;
@@ -149,7 +154,7 @@ fn cross_reference(tokens: &[Token]) -> HashMap<usize, (Option<usize>, usize)> {
 
     // If, Optional Else, End
 
-    for (idx, token)in tokens.iter().enumerate() {
+    for (idx, token) in tokens.iter().enumerate() {
         if *token == IF {
             stack.push((idx, None))
         } else if *token == ELSE {
@@ -168,7 +173,9 @@ fn cross_reference(tokens: &[Token]) -> HashMap<usize, (Option<usize>, usize)> {
         }
     }
 
-    if !stack.is_empty() { panic!("If without end keyword"); }
+    if !stack.is_empty() {
+        panic!("If without end keyword");
+    }
 
     cref
 }
