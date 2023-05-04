@@ -22,8 +22,6 @@ fn main() {
             .filter(|t| *t != Skip)
             .collect::<Vec<_>>();
 
-        println!("{tokens:?}");
-
         let cref = cross_reference(&tokens);
         if !cref.is_empty() {
             println!("{cref:#?}\n----");
@@ -35,6 +33,7 @@ fn main() {
         while idx < tokens.len() {
             let token = tokens[idx];
 
+            // Everything consumes (pops the item it requires)
             match token {
                 Number(n) => stack.push_back(n),
 
@@ -126,6 +125,15 @@ fn main() {
                 Clone => stack.push_back(stack.peek_back().expect("Unexpected token")),
                 Print => print!("{}", pop_back!(stack)),
                 Println => println!("{}", pop_back!(stack)),
+                Clones(n) => {
+                    if stack.len() < n as usize {
+                        eprintln!("Error: insufficient items on the stack");
+                        std::process::exit(1);
+                    }
+
+                    let slice = &stack.get_raw_stack().iter().copied().rev().collect::<Vec<_>>()[0..n as _];
+                    slice.iter().rev().for_each(|i| stack.push_back(*i));
+                }
 
                 _ => {  }
             }
